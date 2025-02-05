@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build-jscad": "vite build --config vite.config.build-jscad.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "prepare": "husky"
   },
   "dependencies": {
+    "@jscad/modeling": "^2.12.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
