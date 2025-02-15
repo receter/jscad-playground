@@ -1,41 +1,44 @@
-// This worker is currently not used but it could be used to run the jscad code in a worker thread
-// The problem is that currently importmaps are not supported in workers
+// Currently importmaps are not supported in workers so we need to rename bare imports and provide a full URL.
 self.onmessage = async (event) => {
-  const { source, params } = event.data;
-  try {
+  const { source, args, type } = event.data;
+
+  if (type === "start") {
+    console.info("Worker started…");
+
+    let module;
+    let loadTime;
     // Create a Blob URL from the user-provided module code.
-    // (It’s important that the Blob’s MIME type is "application/javascript")
-    console.info("Worker initializing");
-    const blob = new Blob(
-      [renameBareImports(String(source), "https://esm.sh/", "")],
-      {
-        type: "application/javascript",
-      },
+    const sourceWithRenamedImports = renameBareImports(
+      String(source),
+      "https://esm.sh/",
     );
+    const blob = new Blob([sourceWithRenamedImports], {
+      type: "application/javascript",
+    });
     const url = URL.createObjectURL(blob);
 
-    // Dynamically import the module.
-    // Creating the worker with type "module" means that (in browsers that support it)
-    // the import map defined in your HTML will be used.
-    const loadStart = performance.now();
-    const module = await import(url);
-    const loadTime = performance.now() - loadStart;
-    console.info(`Worker has loaded the module in ${loadTime.toFixed(2)}ms`);
+    try {
+      // Import the module and measure load time.
+      const loadStart = performance.now();
+      module = await import(url);
+      loadTime = performance.now() - loadStart;
+    } finally {
+      // Revoke the blob object URL to free up memory.
+      URL.revokeObjectURL(url);
+    }
+    console.info(`Worker has loaded the module in ${loadTime.toFixed(2)}ms.`);
 
-    // Execute the exported main() function.
+    // Execute the exported main() function and measure execution time.
+    if (!module.main) {
+      throw new Error("Module does not export a main() function.");
+    }
     const execStart = performance.now();
-    const result = module.main(params);
+    const result = module.main(args);
     const execTime = performance.now() - execStart;
-    console.info(`Worker has executed the module in ${execTime.toFixed(2)}ms`);
-
+    console.info(`Worker has executed the module in ${execTime.toFixed(2)}ms.`);
     // Send back the successful result.
-    self.postMessage({ type: "jscadResult", solids: result });
-
-    // Clean up the Blob URL.
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    // Send back an error message.
-    self.postMessage({ type: "jscadError", error: err.message });
+    self.postMessage({ type: "result", result, execTime, loadTime });
+    self.close();
   }
 };
 
@@ -44,7 +47,7 @@ self.onmessage = async (event) => {
 const importReg =
   /import(?:(?:(?:[ \n\t]+([^ *\n\t{},]+)[ \n\t]*(?:,|[ \n\t]+))?([ \n\t]*\{(?:[ \n\t]*[^ \n\t"'{}]+[ \n\t]*,?)+\})?[ \n\t]*)|[ \n\t]*\*[ \n\t]*as[ \n\t]+([^ \n\t{}]+)[ \n\t]+)from[ \n\t]*(?:['"])([^'"\n]+)(['"])/g;
 
-function renameBareImports(code, prepend = "./", append = ".js") {
+function renameBareImports(code, prefix = "", suffix = "") {
   return code.replace(importReg, (match, p1, p2, p3, moduleSpecifier) => {
     // If the specifier starts with '.' or '/', assume it’s already a proper relative path.
     if (moduleSpecifier.startsWith(".") || moduleSpecifier.startsWith("/")) {
@@ -65,7 +68,7 @@ function renameBareImports(code, prepend = "./", append = ".js") {
     }
 
     // Build the new module specifier.
-    const newSpecifier = prepend + moduleSpecifier + append;
+    const newSpecifier = prefix + moduleSpecifier + suffix;
     // Reconstruct the import statement, replacing only the module specifier.
     return (
       match.slice(0, quoteIndex + 1) +

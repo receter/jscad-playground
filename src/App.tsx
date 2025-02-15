@@ -16,8 +16,8 @@ function App() {
 
   function handleClickRunCode() {
     runCode(source)
-      .then((result) => {
-        setSolids(result.mainResult as Solids);
+      .then(({ result }) => {
+        setSolids(result as Solids);
       })
       .catch((err) => {
         console.error(err);
@@ -28,31 +28,37 @@ function App() {
     runCodeInWorker();
   };
 
-  const runCodeInWorker = async () => {
-    try {
-      // Terminate the previous Worker if it exists
-      if (refWorker.current) {
-        refWorker.current.terminate();
-        console.info("Worker terminated");
-      }
-
-      // Create a Worker
-      const worker = new Worker("/jscad-worker.js", { type: "module" });
-
-      // Listen for messages from the Worker
-      worker.onmessage = (event) => {
-        setSolids(event.data.solids);
-      };
-
-      // Start the worker by sending it the source code and parameters.
-      worker.postMessage({ source: String(source), params: {} });
-
-      // Store the Worker in a ref
-      refWorker.current = worker;
-    } catch (err) {
-      console.error(err);
+  async function runCodeInWorker() {
+    if (refWorker.current) {
+      // Terminate the previous worker.
+      refWorker.current.terminate();
     }
-  };
+
+    // Create a new Worker
+    const worker = new Worker("/jscad-worker.js", {
+      type: "module",
+    });
+
+    // Store the Worker in a ref
+    refWorker.current = worker;
+
+    worker.addEventListener("message", (event) => {
+      if (event.data.type === "result") {
+        setSolids(event.data.result as Solids);
+      }
+    });
+
+    worker.addEventListener("error", (event) => {
+      console.error(event);
+    });
+
+    // Start the worker by sending it the source code and parameters.
+    worker.postMessage({
+      type: "start",
+      source,
+      args: {},
+    });
+  }
 
   return (
     <div style={{ display: "flex" }}>
@@ -96,21 +102,21 @@ const runCode = async (source: string) => {
     const loadStart = performance.now();
     module = await import(/* @vite-ignore */ url);
     loadTime = performance.now() - loadStart;
-    console.info(`Module loaded in ${loadTime.toFixed(2)}ms`);
   } finally {
     // Revoke the blob object URL (!)
     URL.revokeObjectURL(url);
   }
+  console.info(`Module loaded in ${loadTime.toFixed(2)}ms`);
 
   // Execute the exported main() function and measure execution time.
   if (!module.main) {
     throw new Error("Module does not export a main() function");
   }
   const execStart = performance.now();
-  const mainResult = module.main();
+  const result = module.main();
   const execTime = performance.now() - execStart;
   console.info(`Module executed in ${execTime.toFixed(2)}ms`);
-  return { mainResult, execTime, loadTime };
+  return { result, execTime, loadTime };
 };
 
 export default App;
