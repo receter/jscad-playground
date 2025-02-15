@@ -15,35 +15,14 @@ function App() {
   const refWorker = useRef<Worker | null>(null);
 
   function handleClickRunCode() {
-    runCode();
+    runCode(source)
+      .then((result) => {
+        setSolids(result.mainResult as Solids);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   }
-
-  const runCode = async () => {
-    try {
-      // Create a Blob URL from the user-provided module code
-      const blob = new Blob([source], { type: "application/javascript" });
-      const url = URL.createObjectURL(blob);
-
-      // Measure load time for dynamic import.
-      const loadStart = performance.now();
-      const module = await import(/* @vite-ignore */ url);
-      const loadTime = performance.now() - loadStart;
-      console.info(`Module loaded in ${loadTime.toFixed(2)}ms`);
-
-      // Execute the exported main() function and measure execution time.
-      const execStart = performance.now();
-      const mainResult = module.main();
-      const execTime = performance.now() - execStart;
-      console.info(`Module executed in ${execTime.toFixed(2)}ms`);
-
-      setSolids(mainResult);
-
-      // Clean up the Blob URL
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleClickRunCodeInWorker = () => {
     runCodeInWorker();
@@ -103,5 +82,35 @@ function App() {
     </div>
   );
 }
+
+const runCode = async (source: string) => {
+  let module: { main?: () => unknown };
+  let loadTime: number;
+
+  // Create a Blob URL from the user-provided module code.
+  const blob = new Blob([source], { type: "application/javascript" });
+  const url = URL.createObjectURL(blob);
+
+  try {
+    // Import the module and measure load time.
+    const loadStart = performance.now();
+    module = await import(/* @vite-ignore */ url);
+    loadTime = performance.now() - loadStart;
+    console.info(`Module loaded in ${loadTime.toFixed(2)}ms`);
+  } finally {
+    // Revoke the blob object URL (!)
+    URL.revokeObjectURL(url);
+  }
+
+  // Execute the exported main() function and measure execution time.
+  if (!module.main) {
+    throw new Error("Module does not export a main() function");
+  }
+  const execStart = performance.now();
+  const mainResult = module.main();
+  const execTime = performance.now() - execStart;
+  console.info(`Module executed in ${execTime.toFixed(2)}ms`);
+  return { mainResult, execTime, loadTime };
+};
 
 export default App;
