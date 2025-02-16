@@ -35,7 +35,7 @@ function App() {
     }
 
     // Create a new Worker
-    const worker = new Worker("/jscad-worker.js", {
+    const worker = new Worker(`./jscad-worker.js`, {
       type: "module",
     });
 
