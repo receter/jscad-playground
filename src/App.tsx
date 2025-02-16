@@ -28,7 +28,7 @@ function App() {
     runCodeInWorker();
   };
 
-  async function runCodeInWorker() {
+  function runCodeInWorker() {
     if (refWorker.current) {
       // Terminate the previous worker.
       refWorker.current.terminate();

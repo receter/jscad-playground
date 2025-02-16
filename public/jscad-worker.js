@@ -36,8 +36,11 @@ self.onmessage = async (event) => {
     const result = module.main(args);
     const execTime = performance.now() - execStart;
     console.info(`Worker has executed the module in ${execTime.toFixed(2)}ms.`);
+
     // Send back the successful result.
     self.postMessage({ type: "result", result, execTime, loadTime });
+
+    // Close the worker.
     self.close();
   }
 };
