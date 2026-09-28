@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build-jscad": "vite build --config vite.config.build-jscad.ts",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "prepare": "husky"
   },
@@ -19,22 +19,23 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/three": "^0.185.1",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "@vitejs/plugin-react": "^5.2.0",
-    "eslint": "^8.57.1",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "eslint-plugin-react-refresh": "^0.5.5",
-    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "globals": "^17.12.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
     "prettier": "3.9.6",
     "prettier-plugin-css-order": "^2.2.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.6"
+    "typescript-eslint": "^8.70.1",
+    "vite": "^8.3.1"
   },
   "lint-staged": {
     "*.{js?(x),ts?(x)}": [

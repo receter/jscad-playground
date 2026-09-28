@@ -10,7 +10,7 @@ export default defineConfig({
       formats: ["es"],
       fileName: () => "@jscad/modeling.mjs",
     },
-    rollupOptions: {
+    rolldownOptions: {
       // To make export * from "@jscad/modeling"; work
       // otherwise, you will get an empty chunk because of treeshaking
       treeshake: false,
